@@ -9,7 +9,6 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-// Global semaphore to ensure only one browser at a time
 var browserSemaphore = semaphore.NewWeighted(1)
 
 func App() error {
@@ -62,6 +61,7 @@ func handleBrowseRequest(c *fiber.Ctx) error {
 			return err
 		}
 	}
+
 	time.Sleep(30 * time.Second)
 
 	return c.JSON(resp)

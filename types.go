@@ -14,7 +14,8 @@ type BrowseRequest struct {
 }
 
 type BrowseResponse struct {
-	Hijacks map[string]string `json:"hijacks"`
+	Hijacks map[string]any `json:"hijacks"`
+	Error   string         `json:"error,omitempty"`
 }
 
 type BrowseRequestInstruction struct {

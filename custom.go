@@ -2,10 +2,12 @@ package browse
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
@@ -64,18 +66,38 @@ func New(req *BrowseRequest, ctx context.Context) (*rod.Page, error) {
 
 func (req *BrowseRequest) Hijack(page *rod.Page) (*BrowseResponse, error) {
 	resp := &BrowseResponse{
-		Hijacks: make(map[string]string),
+		Hijacks: make(map[string]any),
 	}
 	if len(req.HijackRequests) == 0 {
 		return resp, nil
 	}
 
+	proxyServer, err := url.Parse(req.Proxy)
+	if err != nil {
+		return nil, err
+	}
+
+	proxyClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyURL(proxyServer),
+		},
+	}
+
 	router := page.HijackRequests()
 	for _, pattern := range req.HijackRequests {
 		err := router.Add(pattern, "", func(ctx *rod.Hijack) {
-			ctx.LoadResponse(http.DefaultClient, true)
+
+			ctx.LoadResponse(proxyClient, true)
+			var data any
 			body := ctx.Response.Body()
-			resp.Hijacks[pattern] = body
+			if strings.Contains(ctx.Response.Headers().Get("Content-Type"), "application/json") {
+				err := json.Unmarshal([]byte(body), &data)
+				if err != nil {
+					data = body
+				}
+			}
+
+			resp.Hijacks[pattern] = data
 		})
 		if err != nil {
 			return nil, err
